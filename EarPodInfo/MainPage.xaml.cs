@@ -16,6 +16,7 @@ using Windows.UI.Xaml.Navigation;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Bluetooth;
 using Windows.UI.Xaml.Media.Imaging;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
@@ -28,11 +29,8 @@ namespace EarPodInfo
 
     public sealed partial class MainPage : Page
     {
-        public ObservableCollection<DeviceDisplay> ResultCollection
-        {
-            get;
-            private set;
-        }
+        //public static DeviceClass BLUE_TOOTH_DEVICE_CLASS = DeviceClass.
+        private ObservableCollection<DeviceDisplay> ResultCollection = new ObservableCollection<DeviceDisplay>();
 
         private DeviceWatcher deviceWatcher = null;
 
@@ -45,7 +43,7 @@ namespace EarPodInfo
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-            ResultCollection = new ObservableCollection<DeviceDisplay>();
+            ConnectedDevicesListView.ItemsSource = ResultCollection;
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -55,21 +53,64 @@ namespace EarPodInfo
 
         private void StopWatcher()
         {
+            StopButton.IsEnabled = false;
             if (null != deviceWatcher)
             {
                 if ((DeviceWatcherStatus.Started == deviceWatcher.Status ||
                      DeviceWatcherStatus.EnumerationCompleted == deviceWatcher.Status))
-                {
+                {                    
                     deviceWatcher.Stop();
                 }
                 deviceWatcher = null;
-            }
+            }            
+            RunButton.IsEnabled = true;
         }
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
-        {
-            // TODO: Fill out
+        {         
+            StartWatcher();
         }
+
+        private void StartWatcher()
+        {
+            RunButton.IsEnabled = false;            
+            ResultCollection.Clear();
+            deviceWatcher = DeviceInformation.CreateWatcher(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
+            deviceWatcher.Start();
+            deviceWatcher.Added += OnWatcherDeviceAdded;
+            deviceWatcher.Updated += OnWatcherUpdated;
+            deviceWatcher.Removed += OnWatcherRemoved;
+            deviceWatcher.Stopped += OnWatcherStopped;
+            StopButton.IsEnabled = true;
+        }           
+
+        
+
+        private void OnWatcherDeviceAdded(DeviceWatcher sender, DeviceInformation deviceInfo)
+        {
+            ResultCollection.Add(new DeviceDisplay(deviceInfo));
+        }
+
+        private void OnWatcherUpdated(DeviceWatcher sender, DeviceInformationUpdate args)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void OnWatcherRemoved(DeviceWatcher sender, DeviceInformationUpdate args)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void OnWatcherStopped(DeviceWatcher sender, object args)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {                   
+            StopWatcher();            
+        }
+
     }
 
     // In the list view

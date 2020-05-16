@@ -7,16 +7,52 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-
+    <Page.Resources>
+        <DataTemplate x:Key="ConnectedDevicesListViewTemplate" x:DataType="local:DeviceDisplay">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" MinWidth="100"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Height="40" Width="40" Margin="5" VerticalAlignment="Top">
+                    <Image Source="{x:Bind GlyphBitmapImage, Mode=OneWay}"
+                           Stretch="UniformToFill"/>
+                </Border>
+                <Border Grid.Column="1" Margin="5">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Name:" Margin="0,0,5,0"/>
+                            <TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="Bold" TextWrapping="WrapWholeWords"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Id:" Margin="0,0,5,0"/>
+                            <TextBlock Text="{x:Bind Id, Mode=OneWay}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+    
     <Grid>
         <StackPanel Name="ConnectedDevicesPanel">
             <Button x:Name="RunButton" HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
                                         Content="Start"
-                                        Margin="1"
+                                        Margin="1,0,1,0"
                                         VariableSizedWrapGrid.ColumnSpan="2"
                                         Click="RunButton_Click"/>
-            <ListView Name="ConnectedDevicesList"></ListView>
+            <Button x:Name="StopButton" HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Content="Stop"
+                                        Margin="1,0,1,0"
+                                        VariableSizedWrapGrid.ColumnSpan="2"
+                                        Click="StopButton_Click"/>
+            <ListView x:Name="ConnectedDevicesListView"
+                  Grid.Row="1"
+                  BorderBrush="AntiqueWhite" BorderThickness="1"
+                  Margin="0,10,0,0"
+                  ItemTemplate="{StaticResource ConnectedDevicesListViewTemplate}"/>
         </StackPanel>
     </Grid>
 </Page>
