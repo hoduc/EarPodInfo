@@ -13,12 +13,13 @@ using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.UI.Xaml.Media.Imaging;
+using Windows.UI.Core;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Bluetooth;
-using Windows.UI.Xaml.Media.Imaging;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -29,16 +30,15 @@ namespace EarPodInfo
     /// </summary>
 
     public sealed partial class MainPage : Page
-    {
-        //public static DeviceClass BLUE_TOOTH_DEVICE_CLASS = DeviceClass.
+    {        
         private ObservableCollection<DeviceDisplay> ResultCollection = new ObservableCollection<DeviceDisplay>();
-
         private DeviceWatcher deviceWatcher = null;
-
+        private CoreDispatcher coreDispatcher; // docs on this            
 
         public MainPage()
         {
-            this.InitializeComponent();     
+            this.InitializeComponent();
+            this.coreDispatcher = Dispatcher; // docs on this ?
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -82,44 +82,54 @@ namespace EarPodInfo
 
         
 
-        private void OnWatcherDeviceAdded(DeviceWatcher sender, DeviceInformation deviceInfo)
+        private async void OnWatcherDeviceAdded(DeviceWatcher sender, DeviceInformation deviceInfo)
         {
-            if (IsDeviceWatcherStarted(sender))
+            // schedule udpate on UI Thread because exception VerifyAccess stuff??
+            await coreDispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
             {
-                Debug.WriteLine(deviceInfo.Name);
-                ResultCollection.Add(new DeviceDisplay(deviceInfo));
-            }
-            
+                if (IsDeviceWatcherStarted(sender))
+                {
+                    Debug.WriteLine(deviceInfo.Name);
+                    ResultCollection.Add(new DeviceDisplay(deviceInfo));
+                }
+            });
         }
 
-        private void OnWatcherUpdated(DeviceWatcher sender, DeviceInformationUpdate args)
+        private async void OnWatcherUpdated(DeviceWatcher sender, DeviceInformationUpdate args)
         {
-            if (IsDeviceWatcherStarted(sender))
+            await coreDispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
             {
-                foreach(DeviceDisplay dd in ResultCollection)
+                if (IsDeviceWatcherStarted(sender))
                 {
-                    if (dd.Id == args.Id)
+                    foreach (DeviceDisplay dd in ResultCollection)
                     {
-                        dd.Update(args);
-                        break;
+                        if (dd.Id == args.Id)
+                        {
+                            dd.Update(args);
+                            break;
+                        }
                     }
                 }
-            }
+            });            
         }
 
-        private void OnWatcherRemoved(DeviceWatcher sender, DeviceInformationUpdate args)
+        private async void OnWatcherRemoved(DeviceWatcher sender, DeviceInformationUpdate args)
         {
-            if (IsDeviceWatcherStarted(sender))
+
+            await coreDispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
             {
-                foreach (DeviceDisplay dd in ResultCollection)
+                if (IsDeviceWatcherStarted(sender))
                 {
-                    if (dd.Id == args.Id)
+                    foreach (DeviceDisplay dd in ResultCollection)
                     {
-                        ResultCollection.Remove(dd);
-                        break;
+                        if (dd.Id == args.Id)
+                        {
+                            ResultCollection.Remove(dd);
+                            break;
+                        }
                     }
                 }
-            }
+            });            
         }
 
         private void OnWatcherStopped(DeviceWatcher sender, object args)
