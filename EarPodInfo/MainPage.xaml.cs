@@ -15,6 +15,7 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Bluetooth;
 using Windows.UI.Xaml.Media.Imaging;
@@ -54,15 +55,10 @@ namespace EarPodInfo
         private void StopWatcher()
         {
             StopButton.IsEnabled = false;
-            if (null != deviceWatcher)
+            if (IsDeviceWatcherStarted(deviceWatcher))
             {
-                if ((DeviceWatcherStatus.Started == deviceWatcher.Status ||
-                     DeviceWatcherStatus.EnumerationCompleted == deviceWatcher.Status))
-                {                    
-                    deviceWatcher.Stop();
-                }
-                deviceWatcher = null;
-            }            
+                deviceWatcher.Stop();
+            }
             RunButton.IsEnabled = true;
         }
 
@@ -73,14 +69,14 @@ namespace EarPodInfo
 
         private void StartWatcher()
         {
-            RunButton.IsEnabled = false;            
+            RunButton.IsEnabled = false;         
             ResultCollection.Clear();
-            deviceWatcher = DeviceInformation.CreateWatcher(BluetoothDevice.GetDeviceSelectorFromPairingState(true));
-            deviceWatcher.Start();
+            deviceWatcher = DeviceInformation.CreateWatcher(BluetoothDevice.GetDeviceSelectorFromPairingState(true));            
             deviceWatcher.Added += OnWatcherDeviceAdded;
             deviceWatcher.Updated += OnWatcherUpdated;
             deviceWatcher.Removed += OnWatcherRemoved;
             deviceWatcher.Stopped += OnWatcherStopped;
+            deviceWatcher.Start();
             StopButton.IsEnabled = true;
         }           
 
@@ -88,27 +84,62 @@ namespace EarPodInfo
 
         private void OnWatcherDeviceAdded(DeviceWatcher sender, DeviceInformation deviceInfo)
         {
-            ResultCollection.Add(new DeviceDisplay(deviceInfo));
+            if (IsDeviceWatcherStarted(sender))
+            {
+                Debug.WriteLine(deviceInfo.Name);
+                ResultCollection.Add(new DeviceDisplay(deviceInfo));
+            }
+            
         }
 
         private void OnWatcherUpdated(DeviceWatcher sender, DeviceInformationUpdate args)
         {
-            throw new NotImplementedException();
+            if (IsDeviceWatcherStarted(sender))
+            {
+                foreach(DeviceDisplay dd in ResultCollection)
+                {
+                    if (dd.Id == args.Id)
+                    {
+                        dd.Update(args);
+                        break;
+                    }
+                }
+            }
         }
 
         private void OnWatcherRemoved(DeviceWatcher sender, DeviceInformationUpdate args)
         {
-            throw new NotImplementedException();
+            if (IsDeviceWatcherStarted(sender))
+            {
+                foreach (DeviceDisplay dd in ResultCollection)
+                {
+                    if (dd.Id == args.Id)
+                    {
+                        ResultCollection.Remove(dd);
+                        break;
+                    }
+                }
+            }
         }
 
         private void OnWatcherStopped(DeviceWatcher sender, object args)
         {
-            throw new NotImplementedException();
+            // do nothing ?
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {                   
             StopWatcher();            
+        }
+
+        private static bool IsDeviceWatcherStarted(DeviceWatcher deviceWatcher)
+        {
+            return deviceWatcher != null && (deviceWatcher.Status == DeviceWatcherStatus.Started || deviceWatcher.Status == DeviceWatcherStatus.EnumerationCompleted);
+        }
+
+        private static bool IsDeviceWatcherRunning(DeviceWatcher deviceWatcher)
+        {
+            return deviceWatcher != null && (deviceWatcher.Status == DeviceWatcherStatus.Started || deviceWatcher.Status == DeviceWatcherStatus.EnumerationCompleted || deviceWatcher.Status == DeviceWatcherStatus.Stopping);
         }
 
     }
@@ -177,11 +208,7 @@ namespace EarPodInfo
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string name)
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(name));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
